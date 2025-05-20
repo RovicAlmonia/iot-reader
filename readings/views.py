@@ -17,12 +17,24 @@ class BuildingViewSet(viewsets.ModelViewSet):
 class PowerReadingViewSet(viewsets.ModelViewSet):
     queryset = PowerReading.objects.all().order_by('-timestamp')
     serializer_class = PowerReadingSerializer
+    permission_classes = [AllowAny]  # 👈 allow public access
+    authentication_classes = []      # 👈 disable authentication
+
 
     @action(detail=False, methods=['get'])
     def average_power(self, request):
         data = PowerReading.objects.values('building__name').annotate(avg_power=Avg('power_kw'))
         return Response(data)
 
+
+    def create(self, request, *args, **kwargs):
+        building_id = request.data.get("building_id")
+
+        if building_id is not None:
+            building, created = Building.objects.get_or_create(id=building_id, defaults={"name": f"AutoCreated Building {building_id}"})
+        
+        return super().create(request, *args, **kwargs)
+    
 class UserRegisterSerializer(ModelSerializer):
     class Meta:
         model = User
